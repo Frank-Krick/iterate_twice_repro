@@ -1,3 +1,5 @@
+#include "glib-object.h"
+#include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -17,13 +19,31 @@ struct WirePlumberControl {
 std::vector<Port> iterate(WpObjectManager *om) {
   std::vector<Port> result;
   const auto om_iter = wp_object_manager_new_iterator(om);
-
   GValue port_value;
   while (wp_iterator_next(om_iter, &port_value)) {
-    WpPort *port = WP_PORT(g_value_get_object(&port_value));
-    const auto property_value = wp_pipewire_object_get_property(
-        reinterpret_cast<WpPipewireObject *>(port), "port_alias");
-    result.push_back(Port{.alias = std::string(property_value)});
+    /*
+    if (port_value.g_type != G_TYPE_OBJECT) {
+      std::cout << "Not an object" << std::endl;
+    }
+
+    if (port_value.g_type != WP_TYPE_PORT) {
+      std::cout << "Not a port" << std::endl;
+    }
+    */
+
+    std::cout << g_type_name(port_value.g_type) << std::endl;
+    /*
+        auto object = g_value_get_object(&port_value);
+        std::cout << "object: " << object << std::endl;
+        if (object == nullptr) {
+          continue;
+        }
+
+        WpPort *port = WP_PORT(object);
+        const auto property_value = wp_pipewire_object_get_property(
+            reinterpret_cast<WpPipewireObject *>(port), "port.alias");
+        result.push_back(Port{.alias = std::string(property_value)});
+        */
     g_value_unset(&port_value);
   }
   return result;
@@ -48,9 +68,12 @@ int main(int argc, char *argv[]) {
                                    wire_plumber_service.om);
 
     std::thread invoker([&wire_plumber_service]() {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::seconds(10));
       iterate(wire_plumber_service.om);
+      std::cout << "Invoked" << std::endl;
+
       iterate(wire_plumber_service.om);
+      std::cout << "Invoked" << std::endl;
     });
 
     g_main_loop_run(wire_plumber_service.loop);
